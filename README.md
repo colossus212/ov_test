@@ -1,1 +1,1 @@
-# ov7670_test
+ov_test
