@@ -31,7 +31,6 @@
 /* Set baudrate */
 #define Serial_Baudrate 9600
 
-/* Includes */
 //FreeRTOS
 #include "FreeRTOS.h"
 #include "task.h"
@@ -68,6 +67,7 @@
 #include "motor.h"
 #include "mpu9150.h"
 #include "ms5611.h"
+#include "ov7670_control.h"
 #include "nrf24l01.h"
 #include "serial.h"
 #include "sensor.h"
@@ -85,5 +85,7 @@
 #include "tm_stm32f4_ili9341.h"
 #include "tm_stm32f4_fonts.h"
 #include "tm_stm32f4_spi.h"
+#include "tm_stm32f4_spi_dma.h"
+#include "tm_stm32f4_sdram.h"
 
 #endif

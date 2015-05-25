@@ -33,6 +33,9 @@ void system_init(void)
 {
 	LED_Config();
 	Serial_Config(Serial_Baudrate);
+//	TM_SDRAM_Init();
+	Camera_Init();
+	TM_ILI9341_Init();
 
 	system.status = SYSTEM_INITIALIZED;
 		//至此初始化完成
@@ -40,71 +43,107 @@ void system_init(void)
 }
 
 
-void lcd_task()  		//LCD ili9341 用來顯示飛行器的資料
+void ov7670_task()  		//LCD ili9341 用來顯示飛行器的資料
 {
 	while (system.status != SYSTEM_INITIALIZED);
 
-	TM_ILI9341_Init();
 	TM_ILI9341_Rotate(TM_ILI9341_Orientation_Landscape_2);
-	TM_ILI9341_Fill(ILI9341_COLOR_MAGENTA);
-	TM_ILI9341_Puts(50, 15, "ICLab - Quadrotor", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_BLUE2);
-	TM_ILI9341_Puts(20, 50, "1. Roll:", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	TM_ILI9341_Puts(20, 80, "2. Pitch:", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	TM_ILI9341_Puts(20, 110, "3. Yaw:", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	TM_ILI9341_Puts(20, 140, "4. Height:", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	vTaskDelay(50);
-//while(1);
+
+	TM_ILI9341_Fill(ILI9341_COLOR_WHITE);
+    TM_ILI9341_Puts(65, 20, "Configuring camera", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_BLUE2);
+	TM_ILI9341_DrawRectangle(70, 150, 170, 150+18, ILI9341_COLOR_BLACK);
+ 
+	if (OV7670_Config() != 0){
+        TM_ILI9341_Puts(65, 130, "Failed", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_BLUE2);
+        TM_ILI9341_Puts(60, 150, "Push reset button", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_BLUE2);
+		while(1){
+		}
+	}
+    TM_ILI9341_Puts(20, 50, "A", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_BLUE2);
+	// Infinite program loop
 	while(1){
+        TM_ILI9341_Puts(30, 50, "B", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_BLUE2);
+	    DCMI_CaptureCmd(ENABLE);
+	}
+}
 
-		int LCD_Roll = AngE.Roll;
-		int LCD_Pitch = AngE.Pitch;
-		int LCD_Yaw = AngE.Yaw;
-		int LCD_Roll_Tens, LCD_Pitch_Tens, LCD_Yaw_Tens, LCD_Roll_Digits, LCD_Pitch_Digits, LCD_Yaw_Digits;
-
-		if(LCD_Roll<0){
-			LCD_Roll = LCD_Roll *(-1);
-			TM_ILI9341_Putc(140, 50, '-', &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-		}
-		else
-			TM_ILI9341_Putc(140, 50, ' ', &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-
-		if(LCD_Pitch<0){
-			LCD_Pitch = LCD_Pitch *(-1);
-			TM_ILI9341_Putc(140, 80, '-', &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-		}
-		else
-			TM_ILI9341_Putc(140, 80, ' ', &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-
-		if(LCD_Yaw<0){
-			LCD_Yaw = LCD_Yaw *(-1);
-			TM_ILI9341_Putc(140, 110, '-', &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-		}
-		else
-			TM_ILI9341_Putc(140, 110, ' ', &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-
-		/* 從int轉換為轉char */
-	    LCD_Roll_Tens = LCD_Roll * 0.1;		//取roll角度的十位數
-	    LCD_Roll_Digits = LCD_Roll % 10;	//取roll角度的個位數
-	    LCD_Pitch_Tens = LCD_Pitch * 0.1; 
-	    LCD_Pitch_Digits = LCD_Pitch % 10;
-	    LCD_Yaw_Tens = LCD_Yaw * 0.1; 
-	    LCD_Yaw_Digits = LCD_Yaw % 10;
-
-	    /* 從char轉換為Ascii */
-	    LCD_Roll_Tens = LCD_Roll_Tens + 48; // 0~9 加上48 為 Ascii
-	    LCD_Pitch_Tens = LCD_Pitch_Tens + 48;
-	    LCD_Yaw_Tens = LCD_Yaw_Tens + 48;
-	    LCD_Roll_Digits = LCD_Roll_Digits + 48; 
-	    LCD_Pitch_Digits = LCD_Pitch_Digits + 48;
-	    LCD_Yaw_Digits = LCD_Yaw_Digits + 48;
-
-	    /* 印出字串在螢幕  X,   Y,    string,         字體大小,           字體顏色,             背景顏色        */
-		TM_ILI9341_Putc(150, 50, LCD_Roll_Tens, &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	    TM_ILI9341_Putc(150, 80, LCD_Pitch_Tens, &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	    TM_ILI9341_Putc(150, 110, LCD_Yaw_Tens, &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	    TM_ILI9341_Putc(160, 50, LCD_Roll_Digits, &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	    TM_ILI9341_Putc(160, 80, LCD_Pitch_Digits, &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
-	    TM_ILI9341_Putc(160, 110, LCD_Yaw_Digits, &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_MAGENTA);
+/* SDRAM_LCD_START1 = (uint32_t)0x60020000; */
+/* SDRAM_LCD_START2 = (uint32_t)0x00000000; */
+/* DCMI DMA interrupt */
+void DMA2_Stream1_IRQHandler(void){
+    uint32_t n, i, buffer, *lcd_sdram1 = (uint32_t*) (uint32_t)0x60020000, *lcd_sdram2 = (uint32_t*) 0x00000000;
+    TM_ILI9341_Puts(40, 50, "C", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_BLUE2);
+    // DMA complete
+	if(DMA_GetITStatus(DMA2_Stream1,DMA_IT_TCIF1) == SET){
+        DMA_Cmd(DMA2_Stream1, DISABLE);
+ 
+        //Wait for SPI to be ready
+        while (SPI_I2S_GetFlagStatus(ILI9341_SPI, SPI_I2S_FLAG_BSY));
+ 
+		// Modify image to little endian
+        i=0;
+        for (n = 0; n < (IMG_HEIGHT*IMG_WIDTH)/2; n++) {
+            buffer = lcd_sdram1[n];
+            lcd_sdram2[n] = (((buffer & 0xff000000) >> 8) | ((buffer & 0x00ff0000) << 8) | ((buffer & 0x0000ff00) >> 8) | ((buffer & 0x000000ff) << 8));
+        }
+        // Prepare LCD for image
+        TM_ILI9341_Rotate(TM_ILI9341_Orientation_Landscape_2);
+        TM_ILI9341_SetCursorPosition(0, 0, IMG_HEIGHT - 1, IMG_WIDTH - 1);
+        TM_ILI9341_SendCommand(0x2C); // ILI9341_GRAM = 0x2C
+ 
+        // SPI send
+        GPIO_SetBits(ILI9341_WRX_PORT, ILI9341_WRX_PIN); // ILI9341_WRX_SET;      
+        GPIO_ResetBits(ILI9341_CS_PORT, ILI9341_CS_PIN); // ILI9341_CS_RESET;
+//     TM_SPI_DMA_Transmit(SPI5, NULL, lcd_sdram2, strlen(lcd_sdram2));
+//      TM_SPI_DMA_Init(lcd_sdram2);
+//      SPI_DMA_init(lcd_sdram2);
+        DMA_Cmd(DMA2_Stream4, ENABLE);
+ 
+		// Clear IRQ flag
+		DMA_ClearITPendingBit(DMA2_Stream1,DMA_IT_TCIF1);
+        TM_ILI9341_Puts(50, 50, "D", &TM_Font_11x18, ILI9341_COLOR_BLACK, ILI9341_COLOR_BLUE2);
+	}
+}
+ 
+/* LCD SPI interrupt */
+void DMA2_Stream4_IRQHandler(void){
+	static uint8_t n = 0;
+	uint32_t *lcd_sdram2 = (uint32_t*)0x00000000;
+ 
+	// DMA_SPI complete
+	if(DMA_GetITStatus(DMA2_Stream4,DMA_IT_TCIF4) == SET){
+        DMA_Cmd(DMA2_Stream4, DISABLE);
+ 
+        //Wait for SPI to be ready
+        while (SPI_I2S_GetFlagStatus(ILI9341_SPI, SPI_I2S_FLAG_BSY));
+ 
+        switch(n){
+            case 0:
+//              TM_SPI_DMA_Transmit(SPI5, NULL, lcd_sdram2 + IMG_WIDTH*IMG_HEIGHT*BYTES_PER_PX/3/4, strlen(lcd_sdram2));
+//              TM_SPI_DMA_Init(lcd_sdram2 + IMG_WIDTH*IMG_HEIGHT*BYTES_PER_PX/3/4);;
+//              SPI_DMA_init(lcd_sdram2 + IMG_WIDTH*IMG_HEIGHT*BYTES_PER_PX/3/4);
+                DMA_Cmd(DMA2_Stream4, ENABLE);
+                n++;
+                break;
+            case 1:
+                TM_SPI_DMA_Init(SPI5);
+ //             TM_SPI_DMA_Transmit(SPI5, NULL, lcd_sdram2 + IMG_WIDTH*IMG_HEIGHT*BYTES_PER_PX/3/4, strlen(lcd_sdram2));
+ //             TM_SPI_DMA_Init(lcd_sdram2 + 2*IMG_WIDTH*IMG_HEIGHT*BYTES_PER_PX/3/4);
+ //             SPI_DMA_init(lcd_sdram2 + 2*IMG_WIDTH*IMG_HEIGHT*BYTES_PER_PX/3/4);
+                DMA_Cmd(DMA2_Stream4, ENABLE);
+                n++;
+                break;
+            case 2:
+                GPIO_SetBits(ILI9341_CS_PORT, ILI9341_CS_PIN); // ILI9341_CS_SET;
+                DMA_Cmd(DMA2_Stream1, ENABLE);
+                DCMI_Cmd(ENABLE);
+                DCMI_CaptureCmd(ENABLE);
+                n=0;
+                break;
+        }
+ 
+        // Clear IRQ flag
+        DMA_ClearITPendingBit(DMA2_Stream4,DMA_IT_TCIF4);
 	}
 }
 
@@ -118,18 +157,15 @@ int main(void) 		//主程式
 	vSemaphoreCreateBinary(serial_tx_wait_sem);
 	//以Semaphore設定USART Tx, Rx初始設定
 	serial_rx_queue = xQueueCreate(5, sizeof(serial_msg));
-	Ultrasonic_serial_rx_queue = xQueueCreate(5, sizeof(serial_msg));
 
-	/* IMU Initialization, Attitude Correction Flight Control */
 
-	/* QuadCopter Developing Shell, Ground Station Software */
 	xTaskCreate(shell_task,
 		    (signed portCHAR *) "Shell",
 		    2048, NULL,
 		    tskIDLE_PRIORITY + 7, NULL);
 
 	/* Support LCD ili9341 */
-	xTaskCreate(lcd_task,
+	xTaskCreate(ov7670_task,
 		    (signed portCHAR *) "stm32f429's LCD handler",
 		    1024, NULL,
 		    tskIDLE_PRIORITY + 5, NULL);
